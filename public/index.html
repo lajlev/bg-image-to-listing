@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Board Game Image to Listing</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
+    h1 { margin-bottom: 0.5rem; font-size: 1.8rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    .upload-area { width: 100%; max-width: 600px; border: 2px dashed #ccc; border-radius: 12px; padding: 3rem 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; background: #fff; }
+    .upload-area:hover, .upload-area.dragover { border-color: #4a90d9; background: #f0f7ff; }
+    .upload-area p { font-size: 1.1rem; color: #666; }
+    .upload-area .hint { font-size: 0.85rem; color: #999; margin-top: 0.5rem; }
+    input[type="file"] { display: none; }
+    .thumbnails { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1.5rem 0; max-width: 600px; width: 100%; }
+    .thumb { position: relative; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 2px solid #ddd; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .thumb .status { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7rem; text-align: center; padding: 2px; }
+    .thumb .status.done { background: rgba(39, 174, 96, 0.8); }
+    .thumb .status.error { background: rgba(231, 76, 60, 0.8); }
+    .thumb .status.processing { background: rgba(52, 152, 219, 0.8); }
+    .actions { margin: 1rem 0; display: flex; gap: 1rem; }
+    button { padding: 0.75rem 1.5rem; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #4a90d9; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #357abd; }
+    .btn-success { background: #27ae60; color: #fff; }
+    .btn-success:hover:not(:disabled) { background: #1e8e4e; }
+    .btn-secondary { background: #e0e0e0; color: #333; }
+    .btn-secondary:hover:not(:disabled) { background: #ccc; }
+    .progress-text { color: #666; font-size: 0.9rem; margin: 0.5rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Board Game Image to Listing</h1>
+  <p class="subtitle">Upload photos of board game boxes to generate a CSV listing</p>
+
+  <div class="upload-area" id="uploadArea">
+    <p>Drag & drop images here or click to browse</p>
+    <p class="hint">Supports JPG, PNG, WebP — up to 50 images</p>
+  </div>
+  <input type="file" id="fileInput" multiple accept="image/*">
+
+  <div class="thumbnails" id="thumbnails"></div>
+
+  <div class="actions" id="actions" style="display:none">
+    <button class="btn-primary" id="generateBtn">Generate CSV</button>
+    <button class="btn-secondary" id="clearBtn">Clear</button>
+  </div>
+
+  <p class="progress-text" id="progressText"></p>
+
+  <div class="actions" id="downloadArea" style="display:none">
+    <button class="btn-success" id="downloadBtn">Download CSV</button>
+  </div>
+
+  <script>
+    const uploadArea = document.getElementById("uploadArea");
+    const fileInput = document.getElementById("fileInput");
+    const thumbnails = document.getElementById("thumbnails");
+    const actions = document.getElementById("actions");
+    const generateBtn = document.getElementById("generateBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const progressText = document.getElementById("progressText");
+    const downloadArea = document.getElementById("downloadArea");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    let selectedFiles = [];
+    let csvBlob = null;
+
+    uploadArea.addEventListener("click", () => fileInput.click());
+    uploadArea.addEventListener("dragover", (e) => { e.preventDefault(); uploadArea.classList.add("dragover"); });
+    uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
+    uploadArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove("dragover");
+      addFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener("change", () => { addFiles(fileInput.files); fileInput.value = ""; });
+
+    function addFiles(fileList) {
+      for (const file of fileList) {
+        if (file.type.startsWith("image/")) {
+          selectedFiles.push(file);
+        }
+      }
+      renderThumbnails();
+      actions.style.display = selectedFiles.length > 0 ? "flex" : "none";
+      downloadArea.style.display = "none";
+      csvBlob = null;
+    }
+
+    function renderThumbnails() {
+      thumbnails.innerHTML = "";
+      selectedFiles.forEach((file, i) => {
+        const div = document.createElement("div");
+        div.className = "thumb";
+        div.id = `thumb-${i}`;
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        const status = document.createElement("div");
+        status.className = "status";
+        status.textContent = "Pending";
+        div.appendChild(img);
+        div.appendChild(status);
+        thumbnails.appendChild(div);
+      });
+    }
+
+    function setThumbStatus(index, text, cls) {
+      const thumb = document.getElementById(`thumb-${index}`);
+      if (!thumb) return;
+      const status = thumb.querySelector(".status");
+      status.textContent = text;
+      status.className = `status ${cls}`;
+    }
+
+    clearBtn.addEventListener("click", () => {
+      selectedFiles = [];
+      csvBlob = null;
+      thumbnails.innerHTML = "";
+      actions.style.display = "none";
+      downloadArea.style.display = "none";
+      progressText.textContent = "";
+    });
+
+    generateBtn.addEventListener("click", async () => {
+      generateBtn.disabled = true;
+      clearBtn.disabled = true;
+      downloadArea.style.display = "none";
+      csvBlob = null;
+
+      const formData = new FormData();
+      selectedFiles.forEach((file, i) => {
+        formData.append("images", file);
+        setThumbStatus(i, "Pending", "");
+      });
+
+      // Mark all as processing
+      selectedFiles.forEach((_, i) => setThumbStatus(i, "Processing…", "processing"));
+      progressText.textContent = `Processing ${selectedFiles.length} image(s)…`;
+
+      try {
+        const res = await fetch("/api/identify", { method: "POST", body: formData });
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+        csvBlob = await res.blob();
+        selectedFiles.forEach((_, i) => setThumbStatus(i, "Done", "done"));
+        progressText.textContent = "Complete! Your CSV is ready to download.";
+        downloadArea.style.display = "flex";
+      } catch (err) {
+        selectedFiles.forEach((_, i) => setThumbStatus(i, "Error", "error"));
+        progressText.textContent = `Error: ${err.message}`;
+      } finally {
+        generateBtn.disabled = false;
+        clearBtn.disabled = false;
+      }
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      if (!csvBlob) return;
+      const url = URL.createObjectURL(csvBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "brettspill-listing.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>

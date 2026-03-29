@@ -1,0 +1,18 @@
+{
+  "name": "bg-image-to-listing",
+  "version": "1.0.0",
+  "description": "Identify board games from images using AI and generate CSV listings",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "openai": "^4.73.0",
+    "xml2js": "^0.6.2"
+  }
+}

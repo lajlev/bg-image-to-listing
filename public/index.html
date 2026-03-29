@@ -1,173 +1,892 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Board Game Image to Listing</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
-    h1 { margin-bottom: 0.5rem; font-size: 1.8rem; }
-    .subtitle { color: #666; margin-bottom: 2rem; }
-    .upload-area { width: 100%; max-width: 600px; border: 2px dashed #ccc; border-radius: 12px; padding: 3rem 2rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; background: #fff; }
-    .upload-area:hover, .upload-area.dragover { border-color: #4a90d9; background: #f0f7ff; }
-    .upload-area p { font-size: 1.1rem; color: #666; }
-    .upload-area .hint { font-size: 0.85rem; color: #999; margin-top: 0.5rem; }
-    input[type="file"] { display: none; }
-    .thumbnails { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1.5rem 0; max-width: 600px; width: 100%; }
-    .thumb { position: relative; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 2px solid #ddd; }
-    .thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .thumb .status { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7rem; text-align: center; padding: 2px; }
-    .thumb .status.done { background: rgba(39, 174, 96, 0.8); }
-    .thumb .status.error { background: rgba(231, 76, 60, 0.8); }
-    .thumb .status.processing { background: rgba(52, 152, 219, 0.8); }
-    .actions { margin: 1rem 0; display: flex; gap: 1rem; }
-    button { padding: 0.75rem 1.5rem; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: #4a90d9; color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: #357abd; }
-    .btn-success { background: #27ae60; color: #fff; }
-    .btn-success:hover:not(:disabled) { background: #1e8e4e; }
-    .btn-secondary { background: #e0e0e0; color: #333; }
-    .btn-secondary:hover:not(:disabled) { background: #ccc; }
-    .progress-text { color: #666; font-size: 0.9rem; margin: 0.5rem 0; }
-  </style>
-</head>
-<body>
-  <h1>Board Game Image to Listing</h1>
-  <p class="subtitle">Upload photos of board game boxes to generate a CSV listing</p>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Board Game Image to Listing</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="description" content="Upload photos of board game boxes and get a CSV listing with BGG links, prices from braetspilspriser.dk, descriptions, and categories." />
+        <meta property="og:title" content="Board Game Image to Listing" />
+        <meta property="og:description" content="Upload photos of board game boxes — get a CSV with prices, BGG links, and descriptions. AI-powered identification." />
+        <meta property="og:image" content="/og-image.svg" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Board Game Image to Listing" />
+        <meta name="twitter:description" content="Upload photos of board game boxes — get a CSV with prices, BGG links, and descriptions." />
+        <meta name="twitter:image" content="/og-image.svg" />
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+                background: #f5f5f5;
+                color: #333;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 1.5rem;
+            }
+            h1 {
+                margin-bottom: 0.5rem;
+                font-size: 1.8rem;
+            }
+            .subtitle {
+                color: #666;
+                margin-bottom: 1.5rem;
+            }
+            .upload-area {
+                width: 100%;
+                max-width: 600px;
+                border: 2px dashed #ccc;
+                border-radius: 12px;
+                padding: 2rem;
+                text-align: center;
+                cursor: pointer;
+                transition: border-color 0.2s, background 0.2s;
+                background: #fff;
+            }
+            .upload-area:hover,
+            .upload-area.dragover {
+                border-color: #4a90d9;
+                background: #f0f7ff;
+            }
+            .upload-area p { font-size: 1.1rem; color: #666; }
+            .upload-area .hint { font-size: 0.85rem; color: #999; margin-top: 0.5rem; }
+            input[type="file"] { display: none; }
+            .thumbnails {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                margin: 1rem 0;
+                max-width: 600px;
+                width: 100%;
+            }
+            .thumb {
+                position: relative;
+                width: 140px;
+                height: 140px;
+                border-radius: 6px;
+                overflow: hidden;
+                border: 2px solid #ddd;
+            }
+            .thumb img { width: 100%; height: 100%; object-fit: cover; }
+            .thumb .status {
+                position: absolute;
+                bottom: 0; left: 0; right: 0;
+                background: rgba(0,0,0,0.6);
+                color: #fff;
+                font-size: 0.6rem;
+                text-align: center;
+                padding: 1px;
+            }
+            .thumb .status.done { background: rgba(39,174,96,0.8); }
+            .thumb .status.error { background: rgba(231,76,60,0.8); }
+            .thumb .status.processing { background: rgba(52,152,219,0.8); }
+            .actions {
+                margin: 0.75rem 0;
+                display: flex;
+                gap: 0.75rem;
+                align-items: center;
+            }
+            button {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                transition: opacity 0.2s;
+            }
+            button:disabled { opacity: 0.5; cursor: not-allowed; }
+            .btn-primary { background: #4a90d9; color: #fff; }
+            .btn-primary:hover:not(:disabled) { background: #357abd; }
+            .btn-success { background: #27ae60; color: #fff; }
+            .btn-success:hover:not(:disabled) { background: #1e8e4e; }
+            .btn-secondary { background: #e0e0e0; color: #333; }
+            .btn-secondary:hover:not(:disabled) { background: #ccc; }
+            .btn-warning { background: #f39c12; color: #fff; }
+            .btn-warning:hover:not(:disabled) { background: #d68910; }
+            .progress-text { color: #666; font-size: 0.9rem; margin: 0.5rem 0; }
+            .results-table {
+                width: 100%;
+                margin: 1rem 0;
+                border-collapse: collapse;
+                background: #fff;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                font-size: 0.82rem;
+            }
+            .results-table th,
+            .results-table td {
+                padding: 0.5rem 0.6rem;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+                vertical-align: middle;
+            }
+            .results-table th {
+                background: #4a90d9;
+                color: #fff;
+                font-weight: 600;
+                white-space: nowrap;
+                position: sticky;
+                top: 0;
+            }
+            .results-table tr:last-child td { border-bottom: none; }
+            .results-table td a { color: #4a90d9; text-decoration: none; }
+            .results-table td a:hover { text-decoration: underline; }
+            .results-table .desc-cell {
+                max-width: 350px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                cursor: pointer;
+            }
+            .expand-row td {
+                padding: 0.75rem 0.6rem;
+                background: #fafafa;
+                border-bottom: 2px solid #ddd;
+            }
+            .expand-content {
+                display: flex;
+                gap: 1.5rem;
+                align-items: flex-start;
+            }
+            .expand-content img {
+                width: 256px;
+                height: 256px;
+                object-fit: cover;
+                border-radius: 6px;
+                flex-shrink: 0;
+            }
+            .expand-desc {
+                flex: 1;
+                line-height: 1.5;
+                white-space: normal;
+            }
+            .row-img {
+                width: 100px;
+                height: 100px;
+                object-fit: cover;
+                border-radius: 4px;
+            }
+            .certainty-dot {
+                display: inline-block;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+            }
+            .certainty-green { background: #27ae60; }
+            .certainty-yellow { background: #f39c12; }
+            .certainty-red { background: #e74c3c; }
+            .bgg-edit {
+                display: flex;
+                align-items: center;
+                gap: 0.3rem;
+            }
+            .bgg-input {
+                width: 220px;
+                padding: 0.25rem 0.4rem;
+                font-size: 0.78rem;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                display: none;
+            }
+            .bgg-input:focus { outline: none; border-color: #4a90d9; }
+            .bgg-input.needs-confirm { border-color: #e74c3c; display: block; }
+            .bgg-input.editing { display: block; }
+            .btn-edit {
+                padding: 0.15rem 0.4rem;
+                font-size: 0.7rem;
+                background: #eee;
+                color: #555;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+            }
+            .btn-edit:hover { background: #ddd; }
+            .row-changed td { background: #fff9e6; }
+            .btn-copy {
+                padding: 0.2rem 0.5rem;
+                font-size: 0.7rem;
+                background: #8e44ad;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+            .btn-copy:hover { background: #7d3c98; }
+            .btn-copy:disabled { opacity: 0.5; cursor: not-allowed; }
+            .btn-copy.copied { background: #27ae60; }
+            .login-form {
+                background: #fff;
+                padding: 2rem;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                max-width: 320px;
+                width: 100%;
+                margin-top: 1rem;
+            }
+            .login-form input {
+                width: 100%;
+                padding: 0.6rem 0.75rem;
+                margin-bottom: 0.75rem;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 0.95rem;
+            }
+            .login-form input:focus { outline: none; border-color: #4a90d9; }
+            .login-error { color: #e74c3c; font-size: 0.85rem; margin-bottom: 0.5rem; }
+        </style>
+    </head>
+    <body>
+        <h1>Board Game Image to Listing</h1>
+        <p class="subtitle">Upload photos of board game boxes to generate a CSV listing</p>
 
-  <div class="upload-area" id="uploadArea">
-    <p>Drag & drop images here or click to browse</p>
-    <p class="hint">Supports JPG, PNG, WebP — up to 50 images</p>
-  </div>
-  <input type="file" id="fileInput" multiple accept="image/*">
+        <div class="login-form" id="loginForm">
+            <input type="text" id="loginUser" placeholder="Username" autocomplete="username" />
+            <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" />
+            <p class="login-error" id="loginError" style="display:none"></p>
+            <button class="btn-primary" id="loginBtn" style="width:100%">Log in</button>
+        </div>
 
-  <div class="thumbnails" id="thumbnails"></div>
+        <div id="appContent" style="display:none; width:100%; flex-direction:column; align-items:center;">
+            <div class="upload-area" id="uploadArea">
+                <p>Drag & drop images here or click to browse</p>
+                <p class="hint">Supports JPG, PNG, WebP — up to 50 images</p>
+            </div>
+            <input type="file" id="fileInput" multiple accept="image/*" />
 
-  <div class="actions" id="actions" style="display:none">
-    <button class="btn-primary" id="generateBtn">Generate CSV</button>
-    <button class="btn-secondary" id="clearBtn">Clear</button>
-  </div>
+            <div class="thumbnails" id="thumbnails"></div>
 
-  <p class="progress-text" id="progressText"></p>
+            <div class="actions" id="actions" style="display: none">
+                <button class="btn-primary" id="generateBtn">Generate CSV</button>
+                <button class="btn-secondary" id="clearBtn">Clear</button>
+            </div>
 
-  <div class="actions" id="downloadArea" style="display:none">
-    <button class="btn-success" id="downloadBtn">Download CSV</button>
-  </div>
+            <p class="progress-text" id="progressText"></p>
 
-  <script>
-    const uploadArea = document.getElementById("uploadArea");
-    const fileInput = document.getElementById("fileInput");
-    const thumbnails = document.getElementById("thumbnails");
-    const actions = document.getElementById("actions");
-    const generateBtn = document.getElementById("generateBtn");
-    const clearBtn = document.getElementById("clearBtn");
-    const progressText = document.getElementById("progressText");
-    const downloadArea = document.getElementById("downloadArea");
-    const downloadBtn = document.getElementById("downloadBtn");
+            <table class="results-table" id="resultsTable" style="display: none">
+                <thead>
+                    <tr>
+                        <th>Upload</th>
+                        <th>BGG</th>
+                        <th></th>
+                        <th>Game Name</th>
+                        <th>Year</th>
+                        <th>BGG Link</th>
+                        <th>Price (DKK)</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
 
-    let selectedFiles = [];
-    let csvBlob = null;
+            <div class="actions" id="downloadArea" style="display: none">
+                <button class="btn-success" id="downloadBtn">Export CSV</button>
+                <button class="btn-warning" id="rerunBtn" style="display:none">Rerun changed rows (0)</button>
+                <button class="btn-copy" id="generateAllSalesBtn" style="display:none;padding:0.6rem 1.2rem;font-size:0.9rem;">&#x1F4CB; Generer alle salgsopslag</button>
+                <button class="btn-secondary" id="copyListBtn" style="display:none;padding:0.6rem 1.2rem;font-size:0.9rem;">&#x1F4CB; Kopier liste</button>
+                <button class="btn-copy" id="copyAllSalesBtn" style="display:none;padding:0.6rem 1.2rem;font-size:0.9rem;">&#x1F4CB; Kopier alle salgsopslag</button>
+            </div>
+        </div>
 
-    uploadArea.addEventListener("click", () => fileInput.click());
-    uploadArea.addEventListener("dragover", (e) => { e.preventDefault(); uploadArea.classList.add("dragover"); });
-    uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
-    uploadArea.addEventListener("drop", (e) => {
-      e.preventDefault();
-      uploadArea.classList.remove("dragover");
-      addFiles(e.dataTransfer.files);
-    });
-    fileInput.addEventListener("change", () => { addFiles(fileInput.files); fileInput.value = ""; });
+        <script>
+            // Auth
+            let authToken = sessionStorage.getItem("authToken") || "";
+            const loginForm = document.getElementById("loginForm");
+            const appContent = document.getElementById("appContent");
+            const loginBtn = document.getElementById("loginBtn");
+            const loginUser = document.getElementById("loginUser");
+            const loginPass = document.getElementById("loginPass");
+            const loginError = document.getElementById("loginError");
 
-    function addFiles(fileList) {
-      for (const file of fileList) {
-        if (file.type.startsWith("image/")) {
-          selectedFiles.push(file);
-        }
-      }
-      renderThumbnails();
-      actions.style.display = selectedFiles.length > 0 ? "flex" : "none";
-      downloadArea.style.display = "none";
-      csvBlob = null;
-    }
+            function showApp() {
+                loginForm.style.display = "none";
+                appContent.style.display = "flex";
+            }
+            if (authToken) {
+                fetch("/api/identify", { method: "POST", headers: authHeaders() })
+                    .then(r => { if (r.status === 401) { sessionStorage.removeItem("authToken"); authToken = ""; } else { showApp(); } })
+                    .catch(() => showApp());
+            }
 
-    function renderThumbnails() {
-      thumbnails.innerHTML = "";
-      selectedFiles.forEach((file, i) => {
-        const div = document.createElement("div");
-        div.className = "thumb";
-        div.id = `thumb-${i}`;
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(file);
-        const status = document.createElement("div");
-        status.className = "status";
-        status.textContent = "Pending";
-        div.appendChild(img);
-        div.appendChild(status);
-        thumbnails.appendChild(div);
-      });
-    }
+            loginBtn.addEventListener("click", async () => {
+                loginError.style.display = "none";
+                loginBtn.disabled = true;
+                try {
+                    const res = await fetch("/api/login", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ username: loginUser.value, password: loginPass.value }),
+                    });
+                    if (!res.ok) throw new Error("Invalid username or password");
+                    const data = await res.json();
+                    authToken = data.token;
+                    sessionStorage.setItem("authToken", authToken);
+                    showApp();
+                } catch (err) {
+                    loginError.textContent = err.message;
+                    loginError.style.display = "block";
+                } finally {
+                    loginBtn.disabled = false;
+                }
+            });
+            loginPass.addEventListener("keydown", (e) => { if (e.key === "Enter") loginBtn.click(); });
 
-    function setThumbStatus(index, text, cls) {
-      const thumb = document.getElementById(`thumb-${index}`);
-      if (!thumb) return;
-      const status = thumb.querySelector(".status");
-      status.textContent = text;
-      status.className = `status ${cls}`;
-    }
+            function authHeaders() { return { Authorization: `Bearer ${authToken}` }; }
 
-    clearBtn.addEventListener("click", () => {
-      selectedFiles = [];
-      csvBlob = null;
-      thumbnails.innerHTML = "";
-      actions.style.display = "none";
-      downloadArea.style.display = "none";
-      progressText.textContent = "";
-    });
+            // App
+            const uploadArea = document.getElementById("uploadArea");
+            const fileInput = document.getElementById("fileInput");
+            const thumbnails = document.getElementById("thumbnails");
+            const actions = document.getElementById("actions");
+            const generateBtn = document.getElementById("generateBtn");
+            const clearBtn = document.getElementById("clearBtn");
+            const progressText = document.getElementById("progressText");
+            const resultsTable = document.getElementById("resultsTable");
+            const resultsBody = document.getElementById("resultsBody");
+            const downloadArea = document.getElementById("downloadArea");
+            const downloadBtn = document.getElementById("downloadBtn");
+            const rerunBtn = document.getElementById("rerunBtn");
+            const generateAllSalesBtn = document.getElementById("generateAllSalesBtn");
+            const copyListBtn = document.getElementById("copyListBtn");
+            const copyAllSalesBtn = document.getElementById("copyAllSalesBtn");
 
-    generateBtn.addEventListener("click", async () => {
-      generateBtn.disabled = true;
-      clearBtn.disabled = true;
-      downloadArea.style.display = "none";
-      csvBlob = null;
+            let selectedFiles = [];
+            let results = [];
+            let imageUrls = [];
+            let changedRows = new Set();
 
-      const formData = new FormData();
-      selectedFiles.forEach((file, i) => {
-        formData.append("images", file);
-        setThumbStatus(i, "Pending", "");
-      });
+            uploadArea.addEventListener("click", () => fileInput.click());
+            uploadArea.addEventListener("dragover", (e) => { e.preventDefault(); uploadArea.classList.add("dragover"); });
+            uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
+            uploadArea.addEventListener("drop", (e) => { e.preventDefault(); uploadArea.classList.remove("dragover"); addFiles(e.dataTransfer.files); });
+            fileInput.addEventListener("change", () => { addFiles(fileInput.files); fileInput.value = ""; });
 
-      // Mark all as processing
-      selectedFiles.forEach((_, i) => setThumbStatus(i, "Processing…", "processing"));
-      progressText.textContent = `Processing ${selectedFiles.length} image(s)…`;
+            function addFiles(fileList) {
+                for (const file of fileList) {
+                    if (file.type.startsWith("image/")) {
+                        selectedFiles.push(file);
+                        imageUrls.push(URL.createObjectURL(file));
+                    }
+                }
+                renderThumbnails();
+                actions.style.display = selectedFiles.length > 0 ? "flex" : "none";
+                downloadArea.style.display = "none";
+                resultsTable.style.display = "none";
+                resultsBody.innerHTML = "";
+                results = [];
+                changedRows.clear();
+            }
 
-      try {
-        const res = await fetch("/api/identify", { method: "POST", body: formData });
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+            function renderThumbnails() {
+                thumbnails.innerHTML = "";
+                selectedFiles.forEach((file, i) => {
+                    const div = document.createElement("div");
+                    div.className = "thumb";
+                    div.id = `thumb-${i}`;
+                    const img = document.createElement("img");
+                    img.src = imageUrls[i];
+                    const status = document.createElement("div");
+                    status.className = "status";
+                    status.textContent = "Pending";
+                    div.appendChild(img);
+                    div.appendChild(status);
+                    thumbnails.appendChild(div);
+                });
+            }
 
-        csvBlob = await res.blob();
-        selectedFiles.forEach((_, i) => setThumbStatus(i, "Done", "done"));
-        progressText.textContent = "Complete! Your CSV is ready to download.";
-        downloadArea.style.display = "flex";
-      } catch (err) {
-        selectedFiles.forEach((_, i) => setThumbStatus(i, "Error", "error"));
-        progressText.textContent = `Error: ${err.message}`;
-      } finally {
-        generateBtn.disabled = false;
-        clearBtn.disabled = false;
-      }
-    });
+            function setThumbStatus(index, text, cls) {
+                const thumb = document.getElementById(`thumb-${index}`);
+                if (!thumb) return;
+                const status = thumb.querySelector(".status");
+                status.textContent = text;
+                status.className = `status ${cls}`;
+            }
 
-    downloadBtn.addEventListener("click", () => {
-      if (!csvBlob) return;
-      const url = URL.createObjectURL(csvBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "brettspill-listing.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-  </script>
-</body>
+            function certaintyColor(score) {
+                if (!score) return "yellow";
+                if (score >= 7) return "green";
+                if (score >= 4) return "yellow";
+                return "red";
+            }
+
+            function renderRow(idx) {
+                const row = results[idx];
+                let tr = document.getElementById(`row-${idx}`);
+                if (!tr) {
+                    tr = document.createElement("tr");
+                    tr.id = `row-${idx}`;
+                    resultsBody.appendChild(tr);
+                }
+
+                // Remove old expand row if exists
+                const oldExpand = document.getElementById(`expand-${idx}`);
+                if (oldExpand) oldExpand.remove();
+
+                const color = certaintyColor(row.certainty);
+                const needsConfirm = color === "red";
+                const isChanged = changedRows.has(idx);
+
+                const uploadImg = imageUrls[idx] ? `<img class="row-img" src="${imageUrls[idx]}" />` : "";
+                const bggImg = row.bgg_thumbnail ? `<img class="row-img" src="${row.bgg_thumbnail}" />` : "";
+
+                const priceCell = row.price_link
+                    ? `<a href="${row.price_link}" target="_blank">${esc(row.price_dkk)}</a>`
+                    : esc(row.price_dkk);
+
+                tr.className = isChanged ? "row-changed" : "";
+                tr.style.cursor = "pointer";
+                tr.innerHTML =
+                    `<td>${uploadImg}</td>` +
+                    `<td>${bggImg}</td>` +
+                    `<td><span class="certainty-dot certainty-${color}" title="${row.certainty || '?'}/10"></span></td>` +
+                    `<td>${esc(row.game_name)}</td>` +
+                    `<td>${esc(row.year_published)}</td>` +
+                    `<td>` +
+                      `<div class="bgg-edit">` +
+                        `<a href="${row.bgg_link}" target="_blank" class="bgg-link-display">${row.bgg_link ? 'BGG' : ''}</a>` +
+                        ` <button class="btn-edit" data-idx="${idx}">edit</button>` +
+                        `<input class="bgg-input${needsConfirm ? ' needs-confirm' : ''}" value="${esc(row.bgg_link)}" data-idx="${idx}" />` +
+                      `</div>` +
+                    `</td>` +
+                    `<td>${priceCell}</td>` +
+                    `<td>${esc(row.category)}</td>` +
+                    `<td class="desc-cell" data-idx="${idx}">${esc(row.description)}</td>` +
+                    `<td><button class="btn-copy" data-idx="${idx}">&#x1F4CB; Salgsopslag</button></td>`;
+
+                if (needsConfirm) {
+                    const input = tr.querySelector(".bgg-input");
+                    input.classList.add("editing");
+                    input.focus();
+                    input.select();
+                }
+            }
+
+            function toggleExpand(idx) {
+                const existing = document.getElementById(`expand-${idx}`);
+                if (existing) { existing.remove(); return; }
+
+                const row = results[idx];
+                const tr = document.getElementById(`row-${idx}`);
+                if (!tr) return;
+
+                const expandTr = document.createElement("tr");
+                expandTr.id = `expand-${idx}`;
+                expandTr.className = "expand-row";
+                const colCount = tr.children.length;
+
+                const uploadBig = imageUrls[idx] ? `<img src="${imageUrls[idx]}" />` : "";
+                const bggBig = row.bgg_thumbnail ? `<img src="${row.bgg_thumbnail}" />` : "";
+
+                expandTr.innerHTML = `<td colspan="${colCount}">` +
+                    `<div class="expand-content">` +
+                        uploadBig + bggBig +
+                        `<div class="expand-desc">${esc(row.description)}</div>` +
+                    `</div></td>`;
+
+                tr.after(expandTr);
+            }
+
+            // Click row to expand (but not on links, buttons, inputs)
+            resultsBody.addEventListener("click", (e) => {
+                if (e.target.closest("a, button, input")) return;
+                const tr = e.target.closest("tr");
+                if (!tr || tr.classList.contains("expand-row")) return;
+                const id = tr.id;
+                if (!id || !id.startsWith("row-")) return;
+                const idx = parseInt(id.replace("row-", ""));
+                toggleExpand(idx);
+            });
+
+            // Sales text copy button
+            resultsBody.addEventListener("click", async (e) => {
+                const btn = e.target.closest(".btn-copy");
+                if (!btn) return;
+                e.stopPropagation();
+                const idx = parseInt(btn.dataset.idx);
+                const row = results[idx];
+                if (!row) return;
+
+                btn.disabled = true;
+
+                try {
+                    if (!row._salesText) {
+                        btn.textContent = "Genererer…";
+                        const res = await fetch("/api/sales-text", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", ...authHeaders() },
+                            body: JSON.stringify({
+                                game_name: row.game_name,
+                                year_published: row.year_published,
+                                description: row.description,
+                                category: row.category,
+                                bgg_link: row.bgg_link,
+                                price_dkk: row.price_dkk,
+                                price_link: row.price_link,
+                            }),
+                        });
+                        if (!res.ok) throw new Error("Failed");
+                        const data = await res.json();
+                        row._salesText = data.text;
+                    }
+                    await navigator.clipboard.writeText(row._salesText);
+                    btn.textContent = "\u2705 Kopieret!";
+                    btn.classList.add("copied");
+                    setTimeout(() => {
+                        btn.textContent = "\uD83D\uDCCB Salgsopslag";
+                        btn.classList.remove("copied");
+                        btn.disabled = false;
+                    }, 2000);
+                } catch (err) {
+                    btn.textContent = "\u274C Fejl";
+                    setTimeout(() => { btn.textContent = "\uD83D\uDCCB Salgsopslag"; btn.disabled = false; }, 2000);
+                }
+            });
+
+            function updateRerunBtn() {
+                if (changedRows.size > 0) {
+                    rerunBtn.textContent = `Rerun changed rows (${changedRows.size})`;
+                    rerunBtn.style.display = "";
+                    downloadArea.style.display = "flex";
+                } else {
+                    rerunBtn.style.display = "none";
+                }
+            }
+
+            // Edit button: show input
+            resultsBody.addEventListener("click", (e) => {
+                const editBtn = e.target.closest(".btn-edit");
+                if (editBtn) {
+                    const idx = parseInt(editBtn.dataset.idx);
+                    const tr = document.getElementById(`row-${idx}`);
+                    const input = tr.querySelector(".bgg-input");
+                    input.classList.add("editing");
+                    input.focus();
+                    input.select();
+                }
+            });
+
+            // Track changes on bgg-input
+            resultsBody.addEventListener("input", (e) => {
+                if (!e.target.classList.contains("bgg-input")) return;
+                const idx = parseInt(e.target.dataset.idx);
+                const row = results[idx];
+                const newVal = e.target.value.trim();
+                if (newVal !== row.bgg_link) {
+                    row._newBggLink = newVal;
+                    changedRows.add(idx);
+                    const tr = document.getElementById(`row-${idx}`);
+                    tr.classList.add("row-changed");
+                } else {
+                    delete row._newBggLink;
+                    changedRows.delete(idx);
+                    const tr = document.getElementById(`row-${idx}`);
+                    tr.classList.remove("row-changed");
+                }
+                updateRerunBtn();
+            });
+
+            // Rerun changed rows
+            rerunBtn.addEventListener("click", async () => {
+                rerunBtn.disabled = true;
+                const indices = [...changedRows];
+                for (let i = 0; i < indices.length; i++) {
+                    const idx = indices[i];
+                    const row = results[idx];
+                    const bggLink = row._newBggLink || row.bgg_link;
+                    progressText.textContent = `Re-fetching row ${i + 1} of ${indices.length}…`;
+
+                    try {
+                        const res = await fetch("/api/lookup-bgg", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", ...authHeaders() },
+                            body: JSON.stringify({ bgg_link: bggLink }),
+                        });
+                        if (!res.ok) throw new Error("Lookup failed");
+                        const data = await res.json();
+
+                        row.game_name = data.game_name || row.game_name;
+                        row.bgg_link = data.bgg_link;
+                        row.bgg_thumbnail = data.bgg_thumbnail || "";
+                        row.description = data.description;
+                        row.category = data.category;
+                        row.year_published = data.year_published;
+                        row.price_dkk = data.price_dkk;
+                        row.price_link = data.price_link;
+                        row.certainty = 10;
+                        delete row._newBggLink;
+
+                        renderRow(idx);
+                    } catch (err) {
+                        progressText.textContent = `Error on row ${idx}: ${err.message}`;
+                    }
+                }
+                changedRows.clear();
+                updateRerunBtn();
+                progressText.textContent = "Done re-fetching!";
+                rerunBtn.disabled = false;
+            });
+
+            function esc(str) {
+                const d = document.createElement("div");
+                d.textContent = str || "";
+                return d.innerHTML;
+            }
+
+            function buildCSV(rows) {
+                const headers = ["filename","game_name","year_published","certainty","bgg_link","price_dkk","price_link","description","category"];
+                const escCSV = (v) => {
+                    const s = String(v ?? "");
+                    return s.includes(",") || s.includes('"') || s.includes("\n")
+                        ? '"' + s.replace(/"/g, '""') + '"' : s;
+                };
+                const lines = [headers.join(",")];
+                for (const row of rows) {
+                    lines.push(headers.map((h) => escCSV(row[h])).join(","));
+                }
+                return lines.join("\n") + "\n";
+            }
+
+            const MAX_DIMENSION = 600;
+
+            function resizeImage(file) {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const origW = img.width, origH = img.height;
+                        let { width, height } = img;
+                        let wasResized = false;
+                        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                            const scale = MAX_DIMENSION / Math.max(width, height);
+                            width = Math.round(width * scale);
+                            height = Math.round(height * scale);
+                            wasResized = true;
+                        }
+                        const canvas = document.createElement("canvas");
+                        canvas.width = width;
+                        canvas.height = height;
+                        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+                        URL.revokeObjectURL(img.src);
+                        canvas.toBlob(
+                            (blob) => {
+                                const resized = new File([blob], file.name, { type: "image/jpeg" });
+                                resized._origSize = file.size;
+                                resized._newSize = blob.size;
+                                resized._wasResized = wasResized;
+                                resized._dims = wasResized ? `${origW}x${origH} → ${width}x${height}` : `${width}x${height}`;
+                                resolve(resized);
+                            },
+                            "image/jpeg",
+                            0.8,
+                        );
+                    };
+                    img.src = URL.createObjectURL(file);
+                });
+            }
+
+            function formatBytes(bytes) {
+                if (bytes < 1024) return bytes + " B";
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + " KB";
+                return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+            }
+
+            clearBtn.addEventListener("click", () => {
+                selectedFiles = [];
+                imageUrls = [];
+                results = [];
+                changedRows.clear();
+                thumbnails.innerHTML = "";
+                resultsTable.style.display = "none";
+                resultsBody.innerHTML = "";
+                actions.style.display = "none";
+                downloadArea.style.display = "none";
+                progressText.textContent = "";
+            });
+
+            generateBtn.addEventListener("click", async () => {
+                generateBtn.disabled = true;
+                clearBtn.disabled = true;
+                downloadArea.style.display = "none";
+                resultsTable.style.display = "none";
+                resultsBody.innerHTML = "";
+                results = [];
+                changedRows.clear();
+
+                const formData = new FormData();
+                let totalOrigSize = 0, totalNewSize = 0, resizedCount = 0;
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    progressText.textContent = `Resizing image ${i + 1} of ${selectedFiles.length}…`;
+                    setThumbStatus(i, "Resizing…", "processing");
+                    const resized = await resizeImage(selectedFiles[i]);
+                    formData.append("images", resized);
+                    totalOrigSize += resized._origSize;
+                    totalNewSize += resized._newSize;
+                    if (resized._wasResized) resizedCount++;
+                    setThumbStatus(i, resized._dims, "done");
+                }
+
+                const saved = totalOrigSize - totalNewSize;
+                progressText.textContent = `Resized ${resizedCount} image(s) — ${formatBytes(totalOrigSize)} → ${formatBytes(totalNewSize)} (saved ${formatBytes(saved)}). Uploading…`;
+
+                selectedFiles.forEach((_, i) =>
+                    setThumbStatus(i, "Processing…", "processing"),
+                );
+
+                try {
+                    const res = await fetch(
+                        "/api/identify",
+                        { method: "POST", body: formData, headers: authHeaders() },
+                    );
+                    if (res.status === 401) {
+                        sessionStorage.removeItem("authToken");
+                        authToken = "";
+                        loginForm.style.display = "";
+                        appContent.style.display = "none";
+                        progressText.textContent = "";
+                        throw new Error("Session expired — please log in again");
+                    }
+                    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+                    resultsTable.style.display = "table";
+
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = "";
+                    let done = 0;
+
+                    while (true) {
+                        const { value, done: streamDone } = await reader.read();
+                        if (streamDone) break;
+                        buffer += decoder.decode(value, { stream: true });
+
+                        const lines = buffer.split("\n");
+                        buffer = lines.pop();
+
+                        for (const line of lines) {
+                            if (!line.trim()) continue;
+                            const row = JSON.parse(line);
+                            results.push(row);
+                            renderRow(results.length - 1);
+                            setThumbStatus(row.index, "Done", "done");
+                            done++;
+                            progressText.textContent = `Processed ${done} of ${selectedFiles.length} image(s)…`;
+                        }
+                    }
+
+                    progressText.textContent = "Complete!";
+                    downloadArea.style.display = "flex";
+                    generateAllSalesBtn.style.display = "";
+                    copyListBtn.style.display = "";
+                    updateRerunBtn();
+                } catch (err) {
+                    selectedFiles.forEach((_, i) => {
+                        const thumb = document.getElementById(`thumb-${i}`);
+                        if (thumb && !thumb.querySelector(".status.done")) {
+                            setThumbStatus(i, "Error", "error");
+                        }
+                    });
+                    progressText.textContent = `Error: ${err.message}`;
+                } finally {
+                    generateBtn.disabled = false;
+                    clearBtn.disabled = false;
+                }
+            });
+
+            generateAllSalesBtn.addEventListener("click", async () => {
+                if (results.length === 0) return;
+                generateAllSalesBtn.disabled = true;
+                let generated = 0;
+
+                for (let i = 0; i < results.length; i++) {
+                    const row = results[i];
+                    if (row.game_name === "Unknown") continue;
+                    if (row._salesText) { generated++; continue; }
+                    const btn = document.querySelector(`#row-${i} .btn-copy`);
+                    if (btn) { btn.disabled = true; btn.textContent = "Genererer…"; }
+                    progressText.textContent = `Generating sales text ${i + 1} of ${results.length}…`;
+
+                    try {
+                        const res = await fetch("/api/sales-text", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", ...authHeaders() },
+                            body: JSON.stringify({
+                                game_name: row.game_name,
+                                year_published: row.year_published,
+                                description: row.description,
+                                category: row.category,
+                                bgg_link: row.bgg_link,
+                                price_dkk: row.price_dkk,
+                                price_link: row.price_link,
+                            }),
+                        });
+                        if (!res.ok) throw new Error("Failed");
+                        const data = await res.json();
+                        row._salesText = data.text;
+                        generated++;
+                        if (btn) { btn.textContent = "\uD83D\uDCCB Salgsopslag"; btn.disabled = false; }
+                    } catch {
+                        if (btn) { btn.textContent = "\u274C Fejl"; btn.disabled = false; }
+                    }
+                }
+
+                progressText.textContent = `${generated} sales texts generated!`;
+                copyAllSalesBtn.style.display = "";
+                generateAllSalesBtn.textContent = "\u2705 Genereret!";
+                generateAllSalesBtn.classList.add("copied");
+                setTimeout(() => {
+                    generateAllSalesBtn.textContent = "\uD83D\uDCCB Generer alle salgsopslag";
+                    generateAllSalesBtn.classList.remove("copied");
+                    generateAllSalesBtn.disabled = false;
+                }, 3000);
+            });
+
+            downloadBtn.addEventListener("click", () => {
+                if (results.length === 0) return;
+                const csv = buildCSV(results);
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "brettspill-listing.csv";
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            copyListBtn.addEventListener("click", async () => {
+                if (results.length === 0) return;
+                const lines = results
+                    .filter(r => r.game_name !== "Unknown")
+                    .map(r => `${r.game_name} (${r.year_published || "?"})`);
+                const text = lines.join("\n");
+                await navigator.clipboard.writeText(text);
+                copyListBtn.textContent = "\u2705 Kopieret!";
+                setTimeout(() => { copyListBtn.textContent = "\uD83D\uDCCB Kopier liste"; }, 2000);
+            });
+
+            copyAllSalesBtn.addEventListener("click", async () => {
+                const texts = results
+                    .filter(r => r._salesText)
+                    .map(r => r._salesText);
+                if (texts.length === 0) return;
+                await navigator.clipboard.writeText(texts.join("\n\n---\n\n"));
+                copyAllSalesBtn.textContent = "\u2705 Kopieret!";
+                copyAllSalesBtn.classList.add("copied");
+                setTimeout(() => {
+                    copyAllSalesBtn.textContent = "\uD83D\uDCCB Kopier alle salgsopslag";
+                    copyAllSalesBtn.classList.remove("copied");
+                }, 2000);
+            });
+        </script>
+    </body>
 </html>
